@@ -28,6 +28,7 @@ dependencies = [
 
 [project.scripts]
 ragdiff = "ragdiff.cli:main"
+ragdiff-benchmark = "ragdiff.benchmark:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
