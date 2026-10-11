@@ -1,0 +1,9 @@
+{
+  "document_id": "synthetic-maintenance-guide",
+  "baseline_revision": "original-v1",
+  "candidate_revision": "changed-v2",
+  "changed_chunks": ["chunk-green-valve"],
+  "affected_queries": ["q-green-inspection"],
+  "diagnostic_hypothesis": "The green-valve chunk changed when the inspection step was removed; retrieval no longer returned that chunk for the inspection query.",
+  "certainty": "plausible-cause-not-proof"
+}
