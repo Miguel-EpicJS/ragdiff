@@ -2,10 +2,12 @@
 
 import json
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from psycopg import Connection
 from pydantic import BaseModel, Field
 
@@ -75,6 +77,8 @@ def create_app(
     """Create an API app with dependency-aware product workflows."""
     checks = dict(readiness_checks or {})
     app = FastAPI(title="RAGDiff", version="0.1.0.dev0")
+    if Path("frontend").is_dir():
+        app.mount("/ui", StaticFiles(directory="frontend", html=True), name="frontend")
 
     @app.get("/health")
     def health() -> dict[str, str]:
