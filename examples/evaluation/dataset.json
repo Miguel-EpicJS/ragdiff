@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "dataset_id": "portfolio-fixture",
+  "version": "v1",
+  "queries": [
+    {"query_id": "q-1", "relevant_ids": ["chunk-a"]},
+    {"query_id": "q-2", "relevant_ids": ["chunk-b"]}
+  ]
+}

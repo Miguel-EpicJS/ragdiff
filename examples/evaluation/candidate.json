@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "run_id": "candidate-v1",
+  "dataset_id": "portfolio-fixture",
+  "dataset_version": "v1",
+  "pipeline_version": "candidate",
+  "queries": [
+    {"query_id": "q-1", "items": [{"item_id": "chunk-a", "rank": 1, "score": 0.97, "citation": "doc-a"}]},
+    {"query_id": "q-2", "items": [{"item_id": "chunk-b", "rank": 1, "score": 0.96, "citation": "doc-b"}]}
+  ]
+}
