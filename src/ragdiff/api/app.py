@@ -8,6 +8,8 @@ from typing import Any
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from opentelemetry import trace
+from opentelemetry.trace import Tracer
 from psycopg import Connection
 from pydantic import BaseModel, Field
 
@@ -24,6 +26,7 @@ from ragdiff.domain.ids import Identifier
 from ragdiff.domain.provenance import DocumentRevision
 from ragdiff.domain.report import ComparisonResult
 from ragdiff.domain.retrieval import RetrievalRun
+from ragdiff.telemetry.tracing import instrument_app
 
 ReadinessCheck = Callable[[], bool]
 
@@ -73,12 +76,15 @@ def create_app(
     authenticator: BearerAuthenticator | None = None,
     connection: Connection[Any] | None = None,
     embedding_provider: EmbeddingProvider | None = None,
+    tracer: Tracer | None = None,
 ) -> FastAPI:
     """Create an API app with dependency-aware product workflows."""
     checks = dict(readiness_checks or {})
     app = FastAPI(title="RAGDiff", version="0.1.0.dev0")
     if Path("frontend").is_dir():
         app.mount("/ui", StaticFiles(directory="frontend", html=True), name="frontend")
+    if tracer is not None:
+        instrument_app(app, tracer)
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -105,6 +111,7 @@ def create_app(
         if authenticator is None or connection is None or embedding_provider is None:
             raise RuntimeError("ingestion service is not configured")
         principal: AuthenticatedPrincipal = authenticator.authenticate(authorization)
+        trace.get_current_span().set_attribute("ragdiff.tenant_id", str(principal.tenant_id))
         document = DocumentRevision(
             document_id=Identifier(payload.document_id),
             revision_id=Identifier(payload.revision_id),
@@ -135,6 +142,7 @@ def create_app(
         if authenticator is None or connection is None:
             raise RuntimeError("comparison service is not configured")
         principal = authenticator.authenticate(authorization)
+        trace.get_current_span().set_attribute("ragdiff.tenant_id", str(principal.tenant_id))
         dataset = EvaluationDataset.from_dict(payload.dataset)
         baseline = RetrievalRun.from_dict(payload.baseline)
         candidate = RetrievalRun.from_dict(payload.candidate)
@@ -183,6 +191,7 @@ def create_app(
         if authenticator is None or connection is None:
             raise RuntimeError("comparison service is not configured")
         principal = authenticator.authenticate(authorization)
+        trace.get_current_span().set_attribute("ragdiff.tenant_id", str(principal.tenant_id))
         row = connection.execute(
             """
             SELECT result FROM comparison_reports
