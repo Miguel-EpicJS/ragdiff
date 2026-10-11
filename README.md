@@ -2,8 +2,6 @@
 
 RAGDiff is a Python toolkit for detecting retrieval regressions caused by changes to a knowledge base or retrieval pipeline. It compares two versioned retrieval runs on the same labeled dataset, reports query-level evidence, and applies a fail-closed deployment policy.
 
-> Portfolio MVP: a reliability-engineering case study, not a claim of production maturity.
-
 ## Why this exists
 
 Generic RAG evaluation answers whether a run is good. RAGDiff focuses on what changed and which queries became unsafe to deploy. Its public evidence is intentionally reproducible:
