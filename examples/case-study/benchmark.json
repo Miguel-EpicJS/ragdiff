@@ -6,7 +6,7 @@
     "dataset_version": "original-v1",
     "k": 10,
     "python_version": "3.13.11",
-    "ragdiff_version": "0.1.0.dev0"
+    "ragdiff_version": "0.1.0"
   },
   "deployment_reasons": [
     "regressions=1 exceeds max=0",
@@ -17,7 +17,7 @@
     "estimated_cost_usd": 0.0123,
     "improvements": 0,
     "incomplete": 0,
-    "latency_ms": 0.039,
+    "latency_ms": 0.04,
     "regressions": 1,
     "unchanged": 1
   }
