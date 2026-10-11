@@ -1,7 +1,7 @@
 import pytest
 
 from ragdiff.domain.ids import Identifier
-from ragdiff.domain.metrics import recall_at_k
+from ragdiff.domain.metrics import mean_reciprocal_rank, recall_at_k
 from ragdiff.domain.retrieval import RetrievedItem
 
 
@@ -23,3 +23,20 @@ def test_recall_at_k_returns_zero_for_empty_relevance_set() -> None:
 def test_recall_at_k_rejects_non_positive_cutoff() -> None:
     with pytest.raises(ValueError, match="positive"):
         recall_at_k({Identifier("chunk-1")}, (), 0)
+
+
+def test_mean_reciprocal_rank_uses_first_relevant_rank() -> None:
+    relevant = [{Identifier("chunk-1")}, {Identifier("chunk-2")}]
+    retrieved = [
+        (item("other", 1), item("chunk-1", 2)),
+        (item("other", 1),),
+    ]
+
+    assert mean_reciprocal_rank(relevant, retrieved) == 0.25
+
+
+def test_mean_reciprocal_rank_handles_empty_and_mismatched_inputs() -> None:
+    assert mean_reciprocal_rank([], []) == 0.0
+
+    with pytest.raises(ValueError, match="equal length"):
+        mean_reciprocal_rank([{Identifier("chunk-1")}], [])
