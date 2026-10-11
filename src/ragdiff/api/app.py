@@ -81,7 +81,7 @@ def create_app(
 ) -> FastAPI:
     """Create an API app with dependency-aware product workflows."""
     checks = dict(readiness_checks or {})
-    app = FastAPI(title="RAGDiff", version="0.1.0.dev0")
+    app = FastAPI(title="RAGDiff", version="0.1.0")
     if Path("frontend").is_dir():
         app.mount("/ui", StaticFiles(directory="frontend", html=True), name="frontend")
     if tracer is not None:
