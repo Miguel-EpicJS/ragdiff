@@ -1,9 +1,10 @@
-"""FastAPI service shell with health, readiness, and ingestion contracts."""
+"""FastAPI service shell with health, ingestion, and comparison contracts."""
 
+import json
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from fastapi import FastAPI, Header, Request, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from psycopg import Connection
 from pydantic import BaseModel, Field
@@ -15,8 +16,12 @@ from ragdiff.application.auth import (
 )
 from ragdiff.application.embeddings import EmbeddingProvider
 from ragdiff.application.ingestion import ingest_document
+from ragdiff.domain.comparison import compare_runs
+from ragdiff.domain.dataset import EvaluationDataset
 from ragdiff.domain.ids import Identifier
 from ragdiff.domain.provenance import DocumentRevision
+from ragdiff.domain.report import ComparisonResult
+from ragdiff.domain.retrieval import RetrievalRun
 
 ReadinessCheck = Callable[[], bool]
 
@@ -42,6 +47,24 @@ class DocumentIngestResponse(BaseModel):
     chunk_count: int
 
 
+class ComparisonRequest(BaseModel):
+    """Baseline/candidate comparison input."""
+
+    report_id: str
+    dataset: dict[str, Any]
+    baseline: dict[str, Any]
+    candidate: dict[str, Any]
+    k: int = Field(gt=0)
+
+
+class ComparisonResponse(BaseModel):
+    """Persisted comparison report and provisional deployment decision."""
+
+    report_id: str
+    deployment_status: str
+    result: dict[str, Any]
+
+
 def create_app(
     readiness_checks: Mapping[str, ReadinessCheck] | None = None,
     *,
@@ -49,7 +72,7 @@ def create_app(
     connection: Connection[Any] | None = None,
     embedding_provider: EmbeddingProvider | None = None,
 ) -> FastAPI:
-    """Create an API app with dependency-aware readiness and ingestion."""
+    """Create an API app with dependency-aware product workflows."""
     checks = dict(readiness_checks or {})
     app = FastAPI(title="RAGDiff", version="0.1.0.dev0")
 
@@ -98,6 +121,78 @@ def create_app(
             document_id=str(document.document_id),
             revision_id=str(document.revision_id),
             chunk_count=len(chunks),
+        )
+
+    @app.post("/v1/comparisons", response_model=ComparisonResponse, status_code=201)
+    def compare(
+        payload: ComparisonRequest,
+        authorization: str | None = Header(default=None),
+    ) -> ComparisonResponse:
+        if authenticator is None or connection is None:
+            raise RuntimeError("comparison service is not configured")
+        principal = authenticator.authenticate(authorization)
+        dataset = EvaluationDataset.from_dict(payload.dataset)
+        baseline = RetrievalRun.from_dict(payload.baseline)
+        candidate = RetrievalRun.from_dict(payload.candidate)
+        comparisons = compare_runs(dataset, baseline, candidate, payload.k)
+        report = ComparisonResult(
+            dataset_id=dataset.dataset_id,
+            dataset_version=dataset.version,
+            baseline_run_id=baseline.run_id,
+            candidate_run_id=candidate.run_id,
+            k=payload.k,
+            queries=comparisons,
+        )
+        deployment_status = "blocked" if report.summary["regressions"] else "allowed"
+        result = {"comparison": report.to_dict(), "deployment_status": deployment_status}
+        connection.execute(
+            """
+            INSERT INTO comparison_reports
+                (tenant_id, report_id, dataset_id, dataset_version,
+                 baseline_run_id, candidate_run_id, cutoff_k, result)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+            ON CONFLICT (tenant_id, report_id) DO UPDATE SET result = EXCLUDED.result
+            """,
+            (
+                str(principal.tenant_id),
+                payload.report_id,
+                str(dataset.dataset_id),
+                dataset.version,
+                str(baseline.run_id),
+                str(candidate.run_id),
+                payload.k,
+                json.dumps(result),
+            ),
+        )
+        connection.commit()
+        return ComparisonResponse(
+            report_id=payload.report_id,
+            deployment_status=deployment_status,
+            result=result,
+        )
+
+    @app.get("/v1/comparisons/{report_id}", response_model=ComparisonResponse)
+    def get_comparison(
+        report_id: str,
+        authorization: str | None = Header(default=None),
+    ) -> ComparisonResponse:
+        if authenticator is None or connection is None:
+            raise RuntimeError("comparison service is not configured")
+        principal = authenticator.authenticate(authorization)
+        row = connection.execute(
+            """
+            SELECT result FROM comparison_reports
+            WHERE tenant_id = %s AND report_id = %s
+            """,
+            (str(principal.tenant_id), report_id),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="comparison report not found")
+        result = row[0]
+        return ComparisonResponse(
+            report_id=report_id,
+            deployment_status=result["deployment_status"],
+            result=result,
         )
 
     @app.exception_handler(AuthenticationError)
