@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from psycopg import connect
 
+from ragdiff.application.auth import AuthenticatedPrincipal
 from ragdiff.application.embeddings import EmbeddingBatch
 from ragdiff.application.ingestion import ingest_document
 from ragdiff.domain.ids import Identifier
@@ -31,11 +32,12 @@ def test_ingestion_is_idempotent_and_persists_lineage() -> None:
         for migration in sorted(Path("migrations").glob("*.sql")):
             connection.execute(migration.read_text())
         document = DocumentRevision(Identifier("doc-1"), Identifier("rev-1"), "document-hash", "v1")
+        principal = AuthenticatedPrincipal("user-1", Identifier("tenant-a"), frozenset())
         provider = FakeEmbeddingProvider()
 
         first = ingest_document(
             connection,
-            Identifier("tenant-a"),
+            principal,
             document,
             "abcdefghij",
             provider,
@@ -45,7 +47,7 @@ def test_ingestion_is_idempotent_and_persists_lineage() -> None:
         )
         second = ingest_document(
             connection,
-            Identifier("tenant-a"),
+            principal,
             document,
             "abcdefghij",
             provider,

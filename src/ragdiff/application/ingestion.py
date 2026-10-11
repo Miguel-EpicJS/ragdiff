@@ -6,15 +6,15 @@ from typing import Any
 from psycopg import Connection
 
 from ragdiff.adapters.pgvector import PgVectorStore
+from ragdiff.application.auth import AuthenticatedPrincipal
 from ragdiff.application.chunking import TextChunk, chunk_text
 from ragdiff.application.embeddings import EmbeddingProvider
-from ragdiff.domain.ids import TenantId
 from ragdiff.domain.provenance import DocumentRevision
 
 
 def ingest_document(
     connection: Connection[Any],
-    tenant_id: TenantId,
+    principal: AuthenticatedPrincipal,
     document: DocumentRevision,
     text: str,
     embedding_provider: EmbeddingProvider,
@@ -22,7 +22,7 @@ def ingest_document(
     max_chars: int,
     overlap: int = 0,
 ) -> tuple[TextChunk, ...]:
-    """Idempotently persist a revision, chunks, and their embeddings."""
+    tenant_id = principal.tenant_id
     chunks = chunk_text(document, text, max_chars=max_chars, overlap=overlap)
     embeddings = _embed_chunks(embedding_provider, chunks, embedding_model_version)
 
