@@ -3,6 +3,7 @@ FROM python:3.12-alpine3.21
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src \
+    UV_CACHE_DIR=/tmp/uv-cache \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
