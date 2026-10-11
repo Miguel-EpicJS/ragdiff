@@ -1,6 +1,7 @@
 """Deterministic retrieval quality metrics."""
 
-from collections.abc import Collection, Sequence
+import math
+from collections.abc import Collection, Mapping, Sequence
 
 from ragdiff.domain.ids import Identifier
 from ragdiff.domain.retrieval import RetrievedItem
@@ -46,3 +47,35 @@ def mean_reciprocal_rank(
         relevant_ranks = [item.rank for item in retrieved_items if item.item_id in relevant_ids]
         reciprocal_ranks.append(1.0 / min(relevant_ranks) if relevant_ranks else 0.0)
     return sum(reciprocal_ranks) / len(reciprocal_ranks)
+
+
+def ndcg_at_k(
+    relevance_by_id: Mapping[Identifier, float],
+    retrieved_items: Sequence[RetrievedItem],
+    k: int,
+) -> float:
+    """Return graded NDCG@K; empty or zero-gain labels return ``0.0``."""
+    if k < 1:
+        raise ValueError("k must be positive")
+    if any(not math.isfinite(value) or value < 0 for value in relevance_by_id.values()):
+        raise ValueError("relevance values must be finite and non-negative")
+    if not relevance_by_id:
+        return 0.0
+
+    def gain(relevance: float) -> float:
+        return (2**relevance) - 1
+
+    ideal_gains = sorted((gain(value) for value in relevance_by_id.values()), reverse=True)[:k]
+    ideal_dcg = sum(value / math.log2(rank + 2) for rank, value in enumerate(ideal_gains))
+    if ideal_dcg == 0:
+        return 0.0
+
+    ranked_items = sorted(
+        (item for item in retrieved_items if item.rank <= k),
+        key=lambda item: item.rank,
+    )
+    dcg = sum(
+        gain(relevance_by_id.get(item.item_id, 0.0)) / math.log2(rank + 2)
+        for rank, item in enumerate(ranked_items)
+    )
+    return dcg / ideal_dcg
