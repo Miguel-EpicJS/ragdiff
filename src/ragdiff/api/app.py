@@ -22,6 +22,7 @@ from ragdiff.application.embeddings import EmbeddingProvider
 from ragdiff.application.ingestion import ingest_document
 from ragdiff.domain.comparison import compare_runs
 from ragdiff.domain.dataset import EvaluationDataset
+from ragdiff.domain.deployment import DeploymentPolicy
 from ragdiff.domain.ids import Identifier
 from ragdiff.domain.provenance import DocumentRevision
 from ragdiff.domain.report import ComparisonResult
@@ -155,8 +156,12 @@ def create_app(
             k=payload.k,
             queries=comparisons,
         )
-        deployment_status = "blocked" if report.summary["regressions"] else "allowed"
-        result = {"comparison": report.to_dict(), "deployment_status": deployment_status}
+        decision = DeploymentPolicy().evaluate(report)
+        result = {
+            "comparison": report.to_dict(),
+            "deployment_status": decision.status,
+            "deployment_reasons": list(decision.reasons),
+        }
         connection.execute(
             """
             INSERT INTO comparison_reports
@@ -179,7 +184,7 @@ def create_app(
         connection.commit()
         return ComparisonResponse(
             report_id=payload.report_id,
-            deployment_status=deployment_status,
+            deployment_status=decision.status,
             result=result,
         )
 
