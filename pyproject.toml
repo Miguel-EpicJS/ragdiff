@@ -17,6 +17,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+dependencies = [
+    "psycopg[binary]>=3.2,<4",
+]
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 
