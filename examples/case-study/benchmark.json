@@ -1,0 +1,24 @@
+{
+  "benchmark": {
+    "baseline_pipeline_version": "chunker-v1",
+    "candidate_pipeline_version": "chunker-v2-changed-document",
+    "dataset_id": "synthetic-maintenance",
+    "dataset_version": "original-v1",
+    "k": 10,
+    "python_version": "3.13.11",
+    "ragdiff_version": "0.1.0.dev0"
+  },
+  "deployment_reasons": [
+    "regressions=1 exceeds max=0",
+    "query=q-green-inspection recall_delta=-1.000000"
+  ],
+  "deployment_status": "blocked",
+  "metrics": {
+    "estimated_cost_usd": 0.0123,
+    "improvements": 0,
+    "incomplete": 0,
+    "latency_ms": 0.039,
+    "regressions": 1,
+    "unchanged": 1
+  }
+}
