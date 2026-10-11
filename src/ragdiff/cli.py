@@ -54,3 +54,7 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return value
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
