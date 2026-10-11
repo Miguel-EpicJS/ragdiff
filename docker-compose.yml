@@ -1,0 +1,31 @@
+services:
+  api:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  evaluation-worker:
+    build:
+      context: .
+    profiles: [evaluation]
+    command:
+      - python
+      - -m
+      - ragdiff.cli
+      - --dataset
+      - examples/evaluation/dataset.json
+      - --baseline
+      - examples/evaluation/baseline.json
+      - --candidate
+      - examples/evaluation/candidate.json
+      - --output
+      - /tmp/ragdiff-report.json
+      - --k
+      - "10"
+    read_only: true
+    tmpfs:
+      - /tmp
