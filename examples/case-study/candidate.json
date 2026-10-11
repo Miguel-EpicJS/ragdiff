@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "run_id": "retrieval-changed",
+  "dataset_id": "synthetic-maintenance",
+  "dataset_version": "original-v1",
+  "pipeline_version": "chunker-v2-changed-document",
+  "queries": [
+    {"query_id": "q-blue-torque", "items": [{"item_id": "chunk-blue-valve", "rank": 1, "score": 0.97, "citation": "changed.md#blue-valve"}]},
+    {"query_id": "q-green-inspection", "items": [{"item_id": "chunk-unrelated", "rank": 1, "score": 0.41, "citation": "changed.md#guide"}]}
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "comparison": {
+    "baseline_run_id": "retrieval-original",
+    "candidate_run_id": "retrieval-changed",
+    "dataset_id": "synthetic-maintenance",
+    "dataset_version": "original-v1",
+    "k": 10,
+    "queries": [
+      {
+        "added_item_ids": [],
+        "baseline_recall": 1.0,
+        "candidate_recall": 1.0,
+        "query_id": "q-blue-torque",
+        "rank_changes": [],
+        "recall_delta": 0.0,
+        "removed_item_ids": [],
+        "status": "unchanged"
+      },
+      {
+        "added_item_ids": [
+          "chunk-unrelated"
+        ],
+        "baseline_recall": 1.0,
+        "candidate_recall": 0.0,
+        "query_id": "q-green-inspection",
+        "rank_changes": [],
+        "recall_delta": -1.0,
+        "removed_item_ids": [
+          "chunk-green-valve"
+        ],
+        "status": "regression"
+      }
+    ],
+    "schema_version": 1,
+    "summary": {
+      "improvements": 0,
+      "incomplete": 0,
+      "regressions": 1,
+      "unchanged": 1
+    }
+  },
+  "deployment_reasons": [
+    "regressions=1 exceeds max=0",
+    "query=q-green-inspection recall_delta=-1.000000"
+  ],
+  "deployment_status": "blocked"
+}
