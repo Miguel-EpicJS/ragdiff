@@ -1,7 +1,7 @@
 import pytest
 
 from ragdiff.domain.ids import Identifier
-from ragdiff.domain.metrics import mean_reciprocal_rank, recall_at_k
+from ragdiff.domain.metrics import mean_reciprocal_rank, ndcg_at_k, recall_at_k
 from ragdiff.domain.retrieval import RetrievedItem
 
 
@@ -40,3 +40,20 @@ def test_mean_reciprocal_rank_handles_empty_and_mismatched_inputs() -> None:
 
     with pytest.raises(ValueError, match="equal length"):
         mean_reciprocal_rank([{Identifier("chunk-1")}], [])
+
+
+def test_ndcg_at_k_rewards_correct_ordering() -> None:
+    relevance = {Identifier("chunk-1"): 3.0, Identifier("chunk-2"): 2.0}
+
+    assert ndcg_at_k(relevance, (item("chunk-1", 1), item("chunk-2", 2)), 2) == pytest.approx(1.0)
+    assert ndcg_at_k(relevance, (item("chunk-2", 1), item("chunk-1", 2)), 2) < 1.0
+
+
+def test_ndcg_at_k_handles_empty_and_invalid_relevance() -> None:
+    assert ndcg_at_k({}, (), 1) == 0.0
+
+    with pytest.raises(ValueError, match="non-negative"):
+        ndcg_at_k({Identifier("chunk-1"): -1.0}, (), 1)
+
+    with pytest.raises(ValueError, match="positive"):
+        ndcg_at_k({}, (), 0)
