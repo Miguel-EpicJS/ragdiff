@@ -1,0 +1,43 @@
+name: RAG evaluation
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  retrieval-regression:
+    name: Retrieval regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install locked environment
+        run: uv sync --locked --extra dev --python 3.12
+
+      - name: Compare retrieval runs
+        run: >-
+          uv run --locked ragdiff
+          --dataset examples/evaluation/dataset.json
+          --baseline examples/evaluation/baseline.json
+          --candidate examples/evaluation/candidate.json
+          --output ragdiff-report.json
+          --k 10
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragdiff-evaluation-report
+          path: ragdiff-report.json
+          if-no-files-found: error
