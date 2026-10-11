@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   retrieval-regression:
@@ -34,6 +35,59 @@ jobs:
           --output ragdiff-report.json
           --k 10
 
+      - name: Publish pull request summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "<!-- ragdiff-evaluation -->";
+            if (!fs.existsSync("ragdiff-report.json")) {
+              core.setFailed("evaluation report was not generated");
+              return;
+            }
+            const report = JSON.parse(fs.readFileSync("ragdiff-report.json", "utf8"));
+            const escapeMarkdown = (value) =>
+              String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("`", "\\`");
+            const summary = report.comparison.summary;
+            const reasons = report.deployment_reasons.length
+              ? report.deployment_reasons.map((reason) => `- ${escapeMarkdown(reason)}`).join("\n")
+              : "- none";
+            const body = [
+              marker,
+              "## RAGDiff retrieval evaluation",
+              "",
+              `**Deployment status:** \`${report.deployment_status}\``,
+              "",
+              `Regressions: **${summary.regressions}** · Improvements: **${summary.improvements}** · Incomplete: **${summary.incomplete}**`,
+              "",
+              "Decision evidence:",
+              reasons,
+              "",
+              "The complete JSON report is available in the `ragdiff-evaluation-report` workflow artifact.",
+            ].join("\n");
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number }
+            );
+            const existing = comments.find((comment) =>
+              comment.user.type === "Bot" && comment.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
       - name: Upload evaluation report
         if: always()
         uses: actions/upload-artifact@v4
